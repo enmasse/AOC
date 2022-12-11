@@ -6,14 +6,16 @@ var lines = File.ReadLines("C:\\Users\\mats.alritzson\\source\\repos\\AOC\\AOC11
 
 var monkeys = lines.Select(CreateMonkey).ToDictionary(s => s.monkeyId);
 
-for (var i = 0; i < 20; i++)
+var divisor = monkeys.Select(m => m.Value.divisor).Aggregate((acc, d) => acc * d);
+
+for (var i = 0; i < 10000; i++)
 foreach(var monkey in monkeys.Values.OrderBy(s => s.monkeyId))
 {
     var numItems = monkey.items.Count;
 
     for (var j = 0; j < numItems; j++)
     {
-        var worry = monkey.operation(monkey.items.Dequeue()) / 3;
+        var worry = monkey.operation(monkey.items.Dequeue()) % divisor;
 
         monkeys[monkey.test(worry)].items.Enqueue(worry);
     }
@@ -23,11 +25,11 @@ foreach(var monkey in monkeys.Values.OrderBy(s => s.monkeyId))
 
 var result = monkeys.ToList()
     .Select(m => m.Value.numInspections)
-    .OrderByDescending(m => m)
+    .OrderByDescending(n => n)
     .Take(2)
-    .Aggregate((acc, s) => acc * s);
+    .Aggregate((acc, n) => acc * n);
 
-Console.WriteLine($"Answer 1: {result}");
+Console.WriteLine($"Answer 2: {result}");
 
 Monkey CreateMonkey(string[] chunk)
 {
@@ -36,15 +38,15 @@ Monkey CreateMonkey(string[] chunk)
     var operation = GetOperation(chunk[2]);
     var test = GetTest(chunk[3..]);
 
-    return new Monkey(monkeyId, new Queue<int>(items), operation, test, 0);
+    return new Monkey(monkeyId, new Queue<long>(items), operation, test.func, 0, test.divisor);
 }
 
-List<int> GetItems(string input)
+List<long> GetItems(string input)
 {
-    return $"{input.Trim()},".Split().Skip(2).Select(s => int.Parse(s[..^1])).ToList();
+    return $"{input.Trim()},".Split().Skip(2).Select(s => long.Parse(s[..^1])).ToList();
 }
 
-Func<int, int> GetOperation(string input)
+Func<long, long> GetOperation(string input)
 {
     var args = input.Trim().Split().TakeLast(3).ToList();
 
@@ -54,12 +56,12 @@ Func<int, int> GetOperation(string input)
             return c => c * c;
         case ["old", "*", var a]:
             {
-                var b = int.Parse(a);
+                var b = long.Parse(a);
                 return c => c * b;
             }
         case ["old", "+", var a]:
             {
-                var b = int.Parse(a);
+                var b = long.Parse(a);
                 return c => c + b;
             }
         default:
@@ -67,13 +69,15 @@ Func<int, int> GetOperation(string input)
     }
 }
 
-Func<int, int> GetTest(string[] strings)
+(Func<long, int> func, long divisor)  GetTest(string[] strings)
 {
-    int divisor = int.Parse(strings[0].Trim().Split().Last());
+    long divisor = long.Parse(strings[0].Trim().Split().Last());
     int onTrue = int.Parse(strings[1].Trim().Split().Last());
     int onFalse = int.Parse(strings[2].Trim().Split().Last());
 
-    return c => (c % divisor == 0) ? onTrue : onFalse;
+    Func<long, int> func = (c => (c % divisor == 0) ? onTrue : onFalse);
+
+    return (func, divisor);
 }
 
-record Monkey(int monkeyId, Queue<int> items, Func<int, int> operation, Func<int, int> test, int numInspections);
+record Monkey(int monkeyId, Queue<long> items, Func<long, long> operation, Func<long, int> test, long numInspections, long divisor);
